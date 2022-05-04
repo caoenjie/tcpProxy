@@ -53,7 +53,7 @@
 
 #include <memory>
 #include <mutex>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/asio.hpp>
 
 namespace tcp_proxy
@@ -259,7 +259,12 @@ namespace tcp_proxy
             return true;
          }
 
-         bool accept_other_connections() {
+         bool accept_other_connections(const boost::system::error_code& error) {
+            if(error) {
+               std::cout << error.message() << std::endl;
+               return;
+            }
+
             try
             {
                acceptor_.async_accept(session_->upstream_socket(),
