@@ -262,7 +262,7 @@ namespace tcp_proxy
          bool accept_other_connections(const boost::system::error_code& error) {
             if(error) {
                std::cout << error.message() << std::endl;
-               return;
+               return false;
             }
 
             try
