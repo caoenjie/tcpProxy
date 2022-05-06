@@ -6,6 +6,29 @@
 using boost::asio::ip::tcp;
 namespace ip = boost::asio::ip;
 
+static std::string getCurrentTime()
+{
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+
+  static constexpr size_t MAX_BUFFER_SIZE = 128;
+  char buff[MAX_BUFFER_SIZE + 1];
+  time_t sec = static_cast<time_t>(tv.tv_sec);
+  int ms = static_cast<int>(tv.tv_usec) / 1000;
+
+  struct tm tm_time;
+  localtime_r(&sec, &tm_time);
+  static const char *formater = "[%4d-%02d-%02d %02d:%02d:%02d.%03d]";
+  int ret = snprintf(buff, MAX_BUFFER_SIZE, formater,
+                     tm_time.tm_year + 1900, tm_time.tm_mon + 1, tm_time.tm_mday,
+                     tm_time.tm_hour, tm_time.tm_min, tm_time.tm_sec, ms);
+  if (ret < 0) {
+    return std::string("");
+  }
+
+  return std::string(buff);
+}
+
 class client {
 public:
     client(boost::asio::io_context& io_service, std::string ip, uint16_t port)
@@ -14,6 +37,11 @@ public:
     }
 
     void start() {
+
+        if (!socket_.is_open())
+        {
+            socket_.open(boost::asio::ip::tcp::v4());
+        }
         socket_.non_blocking(true);
         socket_.set_option(boost::asio::ip::tcp::no_delay(true));
         socket_.async_connect(endpoint_, boost::bind(&client::handle_connect, this, boost::asio::placeholders::error));
@@ -26,13 +54,12 @@ public:
             return;
         }
         ::memset(buf, 0, sizeof(buf));
-        ::snprintf(buf, sizeof(buf) - 1, "client send cnt: %d\n", cnt++);
+        ::snprintf(buf, sizeof(buf) - 1, "local client send cnt: %d\n", cnt++);
         boost::asio::async_write(socket_, boost::asio::buffer(buf, strlen(buf)),
                                 boost::bind(&client::handle_wirte,
                                 this,
                                 boost::asio::placeholders::error,
                                 boost::asio::placeholders::bytes_transferred));
-
 
     }
 
@@ -60,12 +87,12 @@ public:
         }
 
         sbuf.sgetn(reinterpret_cast<char *>(buf), static_cast<std::streamsize>(size));
-        std::cout << "recv -> [ " << buf << " ]" << std::endl;
+        std::cout << getCurrentTime() << "recv -> [ " << buf << " ]" << std::endl;
 
         ::memset(buf, 0, sizeof(buf));
-        ::snprintf(buf, sizeof(buf) - 1, "client send cnt: %d\n", cnt++);
+        ::snprintf(buf, sizeof(buf) - 1, "local client send cnt: %d\n", cnt++);
 
-        std::cout << "send -> [ " << buf << " ]" << std::endl;
+        std::cout << getCurrentTime() << "send -> [ " << buf << " ]" << std::endl;
 
         boost::asio::async_write(socket_, boost::asio::buffer(buf, strlen(buf)),
                                 boost::bind(&client::handle_wirte,
@@ -91,7 +118,7 @@ int main(int argc, char* argv[])
 {
     if (argc != 3)
    {
-      std::cerr << "usage: tcp_client <remote ip> <remote port>" << std::endl;
+      std::cerr << getCurrentTime() << " usage: tcp_client <remote ip> <remote port>" << std::endl;
       return 1;
    }
 

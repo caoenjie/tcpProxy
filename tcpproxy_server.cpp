@@ -86,33 +86,33 @@ namespace tcp_proxy
 
       void start()
       {
+         ip::tcp::endpoint remote_ep = downstream_socket_.remote_endpoint();
+         std::cout << "remote ip: " << remote_ep.address().to_string() << " port: " << remote_ep.port() << std::endl;;
+
+         remote_ep = upstream_socket_.remote_endpoint();
+         std::cout << "the other remote ip: " << remote_ep.address().to_string() << " port: " << remote_ep.port() << std::endl;
+
          handle_upstream_connect();
       }
 
       void handle_upstream_connect()
       {
-         if (upstream_socket_.is_open() && downstream_socket_.is_open())
-         {
-            // Setup async read from remote server (upstream)
-            upstream_socket_.async_read_some(
-                 boost::asio::buffer(upstream_data_,max_data_length),
-                 boost::bind(&bridge::handle_upstream_read,
-                      shared_from_this(),
-                      boost::asio::placeholders::error,
-                      boost::asio::placeholders::bytes_transferred));
+         // Setup async read from remote server (upstream)
+         upstream_socket_.async_read_some(
+               boost::asio::buffer(upstream_data_,max_data_length),
+               boost::bind(&bridge::handle_upstream_read,
+                     shared_from_this(),
+                     boost::asio::placeholders::error,
+                     boost::asio::placeholders::bytes_transferred));
 
-            // Setup async read from client (downstream)
-            downstream_socket_.async_read_some(
-                 boost::asio::buffer(downstream_data_,max_data_length),
-                 boost::bind(&bridge::handle_downstream_read,
-                      shared_from_this(),
-                      boost::asio::placeholders::error,
-                      boost::asio::placeholders::bytes_transferred));
-         }
-         else {
-            std::cout << "socket is not open" << std::endl;
-            close();
-         }
+         // Setup async read from client (downstream)
+         downstream_socket_.async_read_some(
+               boost::asio::buffer(downstream_data_,max_data_length),
+               boost::bind(&bridge::handle_downstream_read,
+                     shared_from_this(),
+                     boost::asio::placeholders::error,
+                     boost::asio::placeholders::bytes_transferred));
+
       }
 
    private:
@@ -215,6 +215,10 @@ namespace tcp_proxy
          {
             upstream_socket_.close();
          }
+
+         ::memset(downstream_data_, 0, max_data_length);
+         ::memset(upstream_data_, 0, max_data_length);
+         std::cout << "close all socket on the bridge" << std::endl;
       }
 
       socket_type downstream_socket_;
@@ -222,7 +226,7 @@ namespace tcp_proxy
 
       enum { max_data_length = 8192 }; //8KB
       unsigned char downstream_data_[max_data_length];
-      unsigned char upstream_data_  [max_data_length];
+      unsigned char upstream_data_[max_data_length];
 
       std::mutex mutex_;
 
@@ -268,9 +272,9 @@ namespace tcp_proxy
             try
             {
                acceptor_.async_accept(session_->upstream_socket(),
-                    boost::bind(&acceptor::handle_accept,
-                         this,
-                         boost::asio::placeholders::error));
+                     boost::bind(&acceptor::handle_accept,
+                        this,
+                        boost::asio::placeholders::error));
             }
             catch(std::exception& e)
             {
