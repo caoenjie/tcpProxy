@@ -91,7 +91,10 @@ namespace tcp_proxy
 
          remote_ep = upstream_socket_.remote_endpoint();
          std::cout << "the other remote ip: " << remote_ep.address().to_string() << " port: " << remote_ep.port() << std::endl;
-
+         
+         ::memset(downstream_data_, 0, max_data_length);
+         ::memset(upstream_data_, 0, max_data_length);
+         
          handle_upstream_connect();
       }
 
